@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: villa-booking-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - villa-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: villa-booking-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/villa-booking.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend/dist:/var/www/villa-booking/frontend/dist:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - villa-network
+
+networks:
+  villa-network:
+    driver: bridge
